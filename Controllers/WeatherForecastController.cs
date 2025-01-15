@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using WeatherApi.Models;
 using WeatherApi.Services;
-
 
 namespace WeatherApi.Controllers
 {
@@ -18,7 +18,7 @@ namespace WeatherApi.Controllers
             _cityWeatherService = cityWeatherService;
         }
 
-        //代刚JSON戈
+        //代刚JSON戈ㄏノpostman代刚
         [HttpGet(Name = "GetWeatherForecast")]
         public async Task<IActionResult> GetWeather()
         {
@@ -43,7 +43,7 @@ namespace WeatherApi.Controllers
                     return NotFound("琩礚戈");
                 }
 
-                var finalResult = new List<string>();
+                var finalResult = new List<WeatherDataResult>();
 
                 foreach (var locations in locationsElement.EnumerateArray())
                 {
@@ -53,9 +53,16 @@ namespace WeatherApi.Controllers
                     {
                         var locationName = location.GetProperty("LocationName").GetString();
                         var weatherElements = location.GetProperty("WeatherElement");
-
+           
                         // ノ纗讽玡竚ぱ计沮
-                        var temperatureData = new Dictionary<string, (string AvgTemp, string MaxTemp, string MinTemp)>();
+                        var weatherDataResult = new WeatherDataResult
+                        {
+                            LocationName = locationName,
+                            Day = new List<string>(),
+                            AvgTemperature = new List<int>(),
+                            MaxTemperature = new List<int>(),
+                            MinTemperature = new List<int>()
+                        };
 
                         // 戈琌即12ぱ箇厨㏕把σ–ぱΝ6翴と6翴戈
                         foreach (var weatherElement in weatherElements.EnumerateArray())
@@ -71,41 +78,34 @@ namespace WeatherApi.Controllers
                                 // 矪瞶startTimeΝ6翴戈
                                 if (parsedDateTime.TimeOfDay == TimeSpan.FromHours(6))
                                 {
-                                    string formattedDate = $"{parsedDateTime:yyyy-MM-dd} 06:00:00"; 
-
-                                    if (!temperatureData.ContainsKey(formattedDate))
-                                    {
-                                        temperatureData[formattedDate] = ("", "", "");
-                                    }
+                                    string formattedDate = $"{parsedDateTime:yyyy-MM-dd}";
 
                                     switch (elementName)
                                     {
                                         case "キА放":
-                                            var temperature = time.GetProperty("ElementValue")[0].GetProperty("Temperature").GetString();
-                                            temperatureData[formattedDate] = (temperature, temperatureData[formattedDate].MaxTemp, temperatureData[formattedDate].MinTemp);
+                                            weatherDataResult.Day.Add(formattedDate);
+                                            var avgTemperature = int.Parse(time.GetProperty("ElementValue")[0].GetProperty("Temperature").GetString());
+                                            weatherDataResult.AvgTemperature.Add(avgTemperature);
                                             break;
                                         case "程蔼放":
-                                            var maxTemperature = time.GetProperty("ElementValue")[0].GetProperty("MaxTemperature").GetString();
-                                            temperatureData[formattedDate] = (temperatureData[formattedDate].AvgTemp, maxTemperature, temperatureData[formattedDate].MinTemp);
+                                            var maxTemperature = int.Parse(time.GetProperty("ElementValue")[0].GetProperty("MaxTemperature").GetString());
+                                            weatherDataResult.MaxTemperature.Add(maxTemperature);
                                             break;
                                         case "程放":
-                                            var minTemperature = time.GetProperty("ElementValue")[0].GetProperty("MinTemperature").GetString();
-                                            temperatureData[formattedDate] = (temperatureData[formattedDate].AvgTemp, temperatureData[formattedDate].MaxTemp, minTemperature);
+                                            var minTemperature = int.Parse(time.GetProperty("ElementValue")[0].GetProperty("MinTemperature").GetString());
+                                            weatherDataResult.MinTemperature.Add(minTemperature);
                                             break;
                                     }
                                 }                              
                             }                               
                         }
-       
-                        foreach (var entry in temperatureData)
-                        {
-                            var formattedResult = $"{entry.Key},{locationName},キА放:{entry.Value.AvgTemp},程蔼放:{entry.Value.MaxTemp},程放:{entry.Value.MinTemp}";
-                            finalResult.Add(formattedResult);
-                        }
+
+                        finalResult.Add(weatherDataResult);
                     }                 
                 }
-              
-                return Ok(finalResult);
+                // 盢挡狦锣传 JSON Α
+                var jsonResult = JsonSerializer.Serialize(finalResult);
+                return Content(jsonResult, "application/json");
             }
         }
 
@@ -126,7 +126,6 @@ namespace WeatherApi.Controllers
 
             using (JsonDocument doc = JsonDocument.Parse(forecastData))
             {
-                // 矗 Locations
                 var locationsElement = doc.RootElement
                     .GetProperty("records")
                     .GetProperty("Locations");
@@ -136,7 +135,7 @@ namespace WeatherApi.Controllers
                     return NotFound("琩礚戈");
                 }
 
-                var finalResult = new List<string>();
+                var finalResult = new List<WeatherDataResult>();
 
                 foreach (var locations in locationsElement.EnumerateArray())
                 {
@@ -148,7 +147,14 @@ namespace WeatherApi.Controllers
                         var weatherElements = location.GetProperty("WeatherElement");
 
                         // ノ纗讽玡竚ぱ计沮
-                        var temperatureData = new Dictionary<string, (string AvgTemp, string MaxTemp, string MinTemp)>();
+                        var weatherDataResult = new WeatherDataResult
+                        {
+                            LocationName = locationName,
+                            Day = new List<string>(),
+                            AvgTemperature = new List<int>(),
+                            MaxTemperature = new List<int>(),
+                            MinTemperature = new List<int>()
+                        };
 
                         // 戈琌即12ぱ箇厨㏕把σ–ぱΝ6翴と6翴戈
                         foreach (var weatherElement in weatherElements.EnumerateArray())
@@ -164,41 +170,33 @@ namespace WeatherApi.Controllers
                                 // 矪瞶startTimeΝ6翴戈
                                 if (parsedDateTime.TimeOfDay == TimeSpan.FromHours(6))
                                 {
-                                    string formattedDate = $"{parsedDateTime:yyyy-MM-dd} 06:00:00";
-
-                                    if (!temperatureData.ContainsKey(formattedDate))
-                                    {
-                                        temperatureData[formattedDate] = ("", "", "");
-                                    }
+                                    string formattedDate = $"{parsedDateTime:yyyy-MM-dd}";
 
                                     switch (elementName)
                                     {
                                         case "キА放":
-                                            var temperature = time.GetProperty("ElementValue")[0].GetProperty("Temperature").GetString();
-                                            temperatureData[formattedDate] = (temperature, temperatureData[formattedDate].MaxTemp, temperatureData[formattedDate].MinTemp);
+                                            weatherDataResult.Day.Add(formattedDate);
+                                            var avgTemperature = int.Parse(time.GetProperty("ElementValue")[0].GetProperty("Temperature").GetString());
+                                            weatherDataResult.AvgTemperature.Add(avgTemperature);
                                             break;
                                         case "程蔼放":
-                                            var maxTemperature = time.GetProperty("ElementValue")[0].GetProperty("MaxTemperature").GetString();
-                                            temperatureData[formattedDate] = (temperatureData[formattedDate].AvgTemp, maxTemperature, temperatureData[formattedDate].MinTemp);
+                                            var maxTemperature = int.Parse(time.GetProperty("ElementValue")[0].GetProperty("MaxTemperature").GetString());
+                                            weatherDataResult.MaxTemperature.Add(maxTemperature);
                                             break;
                                         case "程放":
-                                            var minTemperature = time.GetProperty("ElementValue")[0].GetProperty("MinTemperature").GetString();
-                                            temperatureData[formattedDate] = (temperatureData[formattedDate].AvgTemp, temperatureData[formattedDate].MaxTemp, minTemperature);
+                                            var minTemperature = int.Parse(time.GetProperty("ElementValue")[0].GetProperty("MinTemperature").GetString());
+                                            weatherDataResult.MinTemperature.Add(minTemperature);
                                             break;
                                     }
                                 }
                             }
                         }
-
-                        foreach (var entry in temperatureData)
-                        {
-                            var formattedResult = $"{entry.Key},{locationName},キА放:{entry.Value.AvgTemp},程蔼放:{entry.Value.MaxTemp},程放:{entry.Value.MinTemp}";
-                            finalResult.Add(formattedResult);
-                        }
+                        finalResult.Add(weatherDataResult);
                     }
                 }
-
-                return Ok(finalResult);
+                // 盢挡狦锣传 JSON Α
+                var jsonResult = JsonSerializer.Serialize(finalResult);
+                return Content(jsonResult, "application/json");
             }    
         }
     }
